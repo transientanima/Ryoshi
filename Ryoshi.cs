@@ -35,8 +35,6 @@ namespace Ryoshi
 
         static async Task MainAsync(string[] arguments)
         {
-            //Commander.StartGakushi(Process.Start("c:\\Users\\aisom\\Documents\\Ryoshi\\Ryoshi\\bin\\Debug\\gakushi.bat", ">NUL"));
-
             discord = new DiscordClient(new DiscordConfiguration
             {
                 Token = "MY DISCORD TOKEN GOES HERE... USE YOUR OWN ;P",
