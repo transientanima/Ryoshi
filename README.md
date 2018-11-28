@@ -7,4 +7,6 @@ Special thanks to the guys at DSharpPlus (https://dsharpplus.emzi0767.com/) and 
 
 To run this code from your own computer, start a new C# Console App (.NET Framework) project, use Nuget Package Manager to import all necessary packages (see DSharpPlus), copy these files into the project (overwriting Program.cs), change namespace appropriately, create a bot (see Discord Apps Documentation) and invite it to your server, edit the "Token" line in Ryoshi.cs to use your bot's token, compile, and run the .exe.
 
-Or you can just visit us at https://discord.gg/ndVAvQ3 and use the #timer with the museifu who created it. ;)
+Visit us at https://discord.gg/ndVAvQ3 and use the #timer with the museifu who created it. ;)
+
+Instructions for using Ryoshi's commands can be found at our server under #news.
