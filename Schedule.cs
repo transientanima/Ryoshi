@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
+using DSharpPlus.Entities;
 
 /**************************************************************************
 **                                Ryoshi                                 **
@@ -27,12 +30,27 @@ namespace Ryoshi
         public static bool TargargoUp = false;
         public static bool BonusUp = false;
 
-        public static ArrayList FieldBossNames = new ArrayList();
-        public static ArrayList FieldBossServers = new ArrayList();
-        public static ArrayList FieldBossCountdowns = new ArrayList();
+        public static List<string> FieldBossNames = new List<string>();
+        public static List<string> FieldBossServers = new List<string>();
+        public static List<int> FieldBossCountdowns = new List<int>();
 
-        public static ArrayList BellServers = new ArrayList();
-        public static ArrayList BellDurations = new ArrayList();
+        public static List<string> EventNames = new List<string>();
+        public static List<string> EventMessages = new List<string>();
+        public static List<string> EventETAs = new List<string>();
+        public static List<bool> EventStates = new List<bool>();
+        public static List<int> EventCountdowns = new List<int>();
+
+        public static List<string> BellServers = new List<string>();
+        public static List<int> BellDurations = new List<int>();
+        
+        public static List<string> Codes = new List<string>();
+        public static List<string> Zones = new List<string>();
+        public static List<string> Relations = new List<string>();
+
+        static string[] DayCodes = new string[]
+        {
+            "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
+        }; 
 
         public static int DayCode(string day)
         {
@@ -72,7 +90,7 @@ namespace Ryoshi
             }
         }
 
-        public static string GenerateSchedule()
+        public static async Task<string> GenerateSchedule()
         {
             /*
              * These arrays MUST correspond in a one-to-one manner.
@@ -90,9 +108,7 @@ namespace Ryoshi
                 ETA(Offin),
                 ETA(Quint),
                 ETA(Vell),
-                ETA(Fireworks),
-                ETA(Targargo),
-                ETA(BonusXP)
+                ETA(Targargo)
             };
 
             string[] unsortedNames =
@@ -107,12 +123,12 @@ namespace Ryoshi
                 "Offin",
                 "Quint",
                 "Vell",
-                "Fireworks",
-                "Targargo",
-                "BonusXP"
+                "Targargo"
             };
-            
-            return SortedSchedule(unsortedTimes, unsortedNames);
+
+            string sorted = await SortedSchedule(unsortedTimes, unsortedNames);
+
+            return sorted;
         }
 
         public static string BossMessage(string bossName)
@@ -146,14 +162,12 @@ namespace Ryoshi
                     return "**Fireworks will soon be on display off the coast of Velia!** Come see the show! :smiley:";
                 case "Targargo":
                     return "**Let the feast begin!** :grin:";
-                case "BonusXP":
-                    return "**Time to grind, mi dachi! There is an active bonus of** ***1000%*** **on all combat experience gained!** :smiley:";
                 default:
                     return "The abyss is calling.";
             }
         }
 
-        public static string SortedSchedule(string[] bossWaitTimes, string[] bossNames)
+        public static async Task<string> SortedSchedule(string[] bossWaitTimes, string[] bossNames)
         {
             for (int outer = 0; outer < bossWaitTimes.Length; outer++)
             {       
@@ -170,8 +184,7 @@ namespace Ryoshi
                         minimumIndex = inner;
                     }
                 }
-
-
+                
                 minimum = bossWaitTimes[minimumIndex];
 
                 minimumName = bossNames[minimumIndex];
@@ -186,12 +199,25 @@ namespace Ryoshi
             }
             
             string schedule = "";
+            
+            if (EventCountdowns.Count > 0)
+            {
+                schedule = AddEvents();
+            }
 
             for (int index = 0; index < bossNames.Length; index++)
             {
                 string next = "**" + bossNames[index] + "** will return in** " + bossWaitTimes[index] + ".**\n";
 
-                if (next == "**" + bossNames[index] + "** will return in** 0 days, 0 hours, 0 minutes.**\n")
+                if (next == "**" + bossNames[index] + "** will return in** 0 days, 0 hours, 15 minutes.**\n")
+                {
+                    foreach (DiscordMember member in Commander.TaggedMembers)
+                    {
+                        await member.SendMessageAsync($"{bossNames[index]} returns in fifteen minutes!");
+                    }
+                }
+
+                else if (next == "**" + bossNames[index] + "** will return in** 0 days, 0 hours, 0 minutes.**\n")
                 {
                     next = "**" + bossNames[index] + "** has reappeared to terrorize the land! " + BossMessage(bossNames[index]) + "\n";
 
@@ -270,16 +296,10 @@ namespace Ryoshi
                             || (QuintUp && bossNames[index] == "Quint")
                             || (VellUp && bossNames[index] == "Vell")
                             || (TargargoUp && bossNames[index] == "Targargo")
-                            || (FireworksUp && bossNames[index] == "Fireworks")
                         )
                 {
                     next = "**" + bossNames[index] + "** is terrorizing the land! " + BossMessage(bossNames[index]) + "\n";
-
-                    if (bossNames[index] == "Fireworks")
-                    {
-                        next = BossMessage(bossNames[index]) + "\n";
-                    }
-
+                    
                     if (!Commander.refreshRequested)
                     {
                         BossCountdown--;
@@ -288,12 +308,7 @@ namespace Ryoshi
                     if (BossCountdown == 0)
                     {
                         next = "**Well done!** Our people are safe, and **" + bossNames[index] + "** is no longer a threat. :wink:\n";
-
-                        if (bossNames[index] == "Fireworks")
-                        {
-                            next = "Fireworks will appear in the sky north of Velia shortly. **Enjoy the show!** :smiley:\n";
-                        }
-
+                        
                         // You must not forget to set boss back to false.
 
                         GarmothUp = false;
@@ -307,23 +322,7 @@ namespace Ryoshi
                         QuintUp = false;
                         VellUp = false;
                         TargargoUp = false;
-                        FireworksUp = false;
                     }
-                }
-
-                else if (bossNames[index] == "Fireworks")
-                {
-                    next = "**Fireworks will appear off the coast of Velia in " + bossWaitTimes[index] + ".**\n";
-                }
-
-                else if (bossNames[index] == "BonusXP" && !BonusUp)
-                {
-                    next = "**Get ready, homies! An epic bonus-experience event begins in " + bossWaitTimes[index] + ".** :grin:\n";
-                }
-
-                else if (bossNames[index] == "BonusXP" && BonusUp)
-                {
-                    next = "";
                 }
 
                 if (next.Contains("terroriz") || next.Contains("safe"))
@@ -335,12 +334,12 @@ namespace Ryoshi
                 }
             }
 
-            if (FieldBossCountdowns.ToArray().Length > 0)
+            if (FieldBossCountdowns.Count > 0)
             {
                 schedule = AddFieldBosses(schedule);
             }
 
-            if (BellServers.ToArray().Length > 0)
+            if (BellServers.Count > 0)
             {
                 schedule = AddBells(schedule);
             }
@@ -377,11 +376,11 @@ namespace Ryoshi
             return newIsEarlier;
         }
         
-        public static string ETA(string[] Boss)
+        public static string ETA(string[] Schedule)
         {
             string ETA = "";
 
-            var nextSpawn = Boss[GetNextTime(Boss)];
+            var nextSpawn = Schedule[GetNextTime(Schedule)];
 
             var time = nextSpawn.Substring(2, 5);
 
@@ -475,23 +474,46 @@ namespace Ryoshi
             return 0;
         }
 
-        public static void ActivateBell(string server, string duration)
+        public static string AddEvents()
+        {
+            string schedule = "";
+
+            for (int index = 0; index < EventNames.Count; index++)
+            {
+                schedule += $"**{EventNames[index]}:**\n\t";
+
+                if (EventStates[index])
+                {
+                    schedule += $"{EventMessages[index]}\n";
+                } else
+                {
+                    schedule += $"This special event begins in {EventETAs[index]}\n";
+                }
+            }
+
+            return schedule;
+        }
+
+        public static async Task ActivateBell(string server, int duration)
         {
             int sort = SortedInsertionPoint(duration);
             
             BellServers.Insert(sort, server);
             BellDurations.Insert(sort, duration);
+
+            foreach (DiscordMember member in Commander.TaggedMembers)
+            {
+                await member.SendMessageAsync($"A **Golden Bell** was flagged on** {BellServers[sort]} **with **{BellDurations[sort]} minutes remaining!**");
+            }
         }
 
-        public static int SortedInsertionPoint(string duration)
+        public static int SortedInsertionPoint(int duration)
         {
             int sort = 0; 
 
             for (int index = 0; index < BellDurations.Count; index++)
             {
-                string next = "" + BellDurations[index];
-
-                if (Int32.Parse(next) > Int32.Parse(duration))
+                if (BellDurations[index] > duration)
                 {
                     sort++;
                 }
@@ -512,34 +534,42 @@ namespace Ryoshi
 
         public static string AddBells(string schedule)
         {
-            int bells = BellServers.ToArray().Length;
+            int bells = BellServers.Count;
 
-            if (bells == 1)
-            {
-                schedule += "\n:crossed_swords: Some wonderful adventurer has activated a **Golden Bell**! :crossed_swords:\n\n";
-            } else if (bells == 2) {
-                schedule += "\n:crossed_swords: Some wonderful adventurers have activated a couple **Golden Bells**! :crossed_swords:\n\n";
-            } else if (bells == 3) {
-                schedule += "\n:crossed_swords: Some wonderful adventurers have activated a few **Golden Bells**! :crossed_swords:\n\n";
-            } else {
-                schedule += "\n:crossed_swords: Some wonderful adventurers have activated several **Golden Bells**! :crossed_swords:\n\n";
-            }
 
-            for (int index = 0; index < BellServers.ToArray().Length; index++)
+
+            for (int index = 0; index < BellServers.Count; index++)
             {
 
                 if (!Commander.refreshRequested) { 
-                    BellDurations[index] = Int32.Parse(BellDurations[index].ToString()) - 1;
+                    BellDurations[index]--;
                 }
 
-                if (Int32.Parse(BellDurations[index].ToString()) == 0)
+                if (BellDurations[index] == 0)
                 {
                     BellServers.RemoveAt(index);
                     BellDurations.RemoveAt(index);
                     index--;
                 } else
                 {
-                    schedule += "**" + Capitalize(BellServers[index].ToString()) + "** has an active buff with about **" + Int32.Parse(BellDurations[index].ToString())
+                    if (bells == 1)
+                    {
+                        schedule += "\n:crossed_swords: Some wonderful adventurer has activated a **Golden Bell**! :crossed_swords:\n\n";
+                    }
+                    else if (bells == 2)
+                    {
+                        schedule += "\n:crossed_swords: Some wonderful adventurers have activated a couple **Golden Bells**! :crossed_swords:\n\n";
+                    }
+                    else if (bells == 3)
+                    {
+                        schedule += "\n:crossed_swords: Some wonderful adventurers have activated a few **Golden Bells**! :crossed_swords:\n\n";
+                    }
+                    else
+                    {
+                        schedule += "\n:crossed_swords: Some wonderful adventurers have activated several **Golden Bells**! :crossed_swords:\n\n";
+                    }
+
+                    schedule += "**" + Capitalize(BellServers[index]) + "** has an active buff with about **" + BellDurations[index]
                         + " minutes remaining.**\n";
                 }
             }
@@ -583,7 +613,7 @@ namespace Ryoshi
                 BonusUp = true;
                 FieldBossNames.Add("**Time to grind, mi dachi! There is an active bonus of** ***1000%*** **on all combat experience gained!** :smiley:");
                 FieldBossServers.Add(server);
-                FieldBossCountdowns.Add(180);
+                FieldBossCountdowns.Add(181);
                 return;
             }
             else
@@ -591,12 +621,12 @@ namespace Ryoshi
                 return;
             }
             FieldBossServers.Add(server);
-            FieldBossCountdowns.Add(15);
+            FieldBossCountdowns.Add(16);
         }
 
         public static void DeactivateFieldBoss(int index)
         {
-            if (FieldBossNames[index].ToString().ToLower().Contains("time to grind"))
+            if (FieldBossNames[index].ToLower().Contains("time to grind"))
             {
                 BonusUp = false;
             }
@@ -609,21 +639,18 @@ namespace Ryoshi
         public static string AddFieldBosses(string schedule)
         {
             string fields = "";
-
-            for (int index = 0; index < FieldBossNames.ToArray().Length; index++)
+            
+            for (int index = 0; index < FieldBossNames.Count; index++)
             {
-                if (FieldBossNames[index].ToString().ToLower().Contains("time to grind"))
+                if (!Commander.refreshRequested)
                 {
-                    fields += FieldBossNames[index].ToString() + "\n";
-                }
-                else { 
-                    fields += "**" + Capitalize(FieldBossNames[index].ToString()) + "** was spotted approximately **" + (16 - Int32.Parse(FieldBossCountdowns[index].ToString())) 
-                        + " minutes ago**. If you're nearby, check **" + Capitalize(FieldBossServers[index].ToString()) + "**!\n";
+                    FieldBossCountdowns[index]--;
                 }
 
-                FieldBossCountdowns[index] = Int32.Parse(FieldBossCountdowns[index].ToString()) - 1;
+                fields += "**" + Capitalize(FieldBossNames[index]) + "** was spotted approximately **" + (16 - FieldBossCountdowns[index]) 
+                    + " minutes ago**. If you're nearby, check **" + Capitalize(FieldBossServers[index]) + "**!\n";
 
-                if (Int32.Parse(FieldBossCountdowns[index].ToString()) == 0)
+                if (FieldBossCountdowns[index] == 0)
                 {
                     DeactivateFieldBoss(index);
                     index--;
@@ -638,14 +665,97 @@ namespace Ryoshi
             return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(input);
         }
         
-        public static bool IsBoss(int index)
+        /** 
+         *  Requires the time of day on a 24-hour (NOT 12-hour) clock.
+         *  Returns the time of day on a 24-hour clock.
+         */
+        public static string AdjustedTime(string relation)
         {
-            if (FieldBossNames[index].ToString().ToLower().Contains("time to grind"))
-            {
-                return false;
-            }
+            int changeHour = Hours(relation);
+            int changeMinute = Minutes(relation);
+            
+            return DateTime.UtcNow.AddHours(changeHour).AddMinutes(changeMinute).ToString("H:mm");
+        }
 
-            return true;
+        public static void ReadZoneInfo()
+        {
+            string filename = "codes.txt";
+            string next = "";
+
+            if (System.IO.File.Exists(filename))
+            {
+                System.IO.StreamReader objectReader;
+                objectReader = new System.IO.StreamReader(filename);
+
+                do
+                {
+                    next = objectReader.ReadLine() + "\r\n";
+
+                    string code = next.Split('\t')[0].Trim().ToLower();
+                    string zone = next.Split('\t')[1].Trim();
+                    string relation = next.Split('\t')[2].Trim();
+
+                    Codes.Add(code);
+                    Zones.Add(zone);
+                    Relations.Add(relation);
+                }
+                while (objectReader.Peek() != -1);
+
+                objectReader.Close();
+            }
+            else
+            {
+                Console.WriteLine("Must include codes.txt in the same folder as Ryoshi.exe.");
+                Console.ReadLine();
+                Environment.Exit(0);
+            }
+        }
+
+        public static int Hours(string relation)
+        {
+            int start = 0;
+
+            if (relation.Contains("UTC+"))
+            {
+                start = relation.IndexOf("UTC+") + 4;
+                return Int32.Parse(relation.Substring(start, 2));
+            }
+            else if (relation.Contains("UTC−"))
+            {
+                start = relation.IndexOf("UTC−") + 4;
+                return -Int32.Parse(relation.Substring(start, 2));
+            }
+            else
+            {
+                return start;
+            }
+        }
+
+        public static int Minutes(string relation)
+        {
+            int start = 0;
+
+            try
+            {
+                if (relation.Contains("UTC+"))
+                {
+                    start = relation.IndexOf("UTC+") + 7;
+                    return Int32.Parse(relation.Substring(start, 2));
+                }
+                else if (relation.Contains("UTC−"))
+                {
+                    start = relation.IndexOf("UTC−") + 7;
+                    return -Int32.Parse(relation.Substring(start, 2));
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+            catch
+            {
+                return 0;
+            }
         }
 
         public static string[] Garmoth = {

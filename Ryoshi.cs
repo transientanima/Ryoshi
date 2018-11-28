@@ -24,20 +24,13 @@ namespace Ryoshi
             MainAsync(arguments).ConfigureAwait(false).GetAwaiter().GetResult();
         }
 
-        public void Start()
-        {
-        }
-
-        public void Stop()
-        {
-
-        }
-
         static async Task MainAsync(string[] arguments)
         {
+            //Commander.StartGakushi(Process.Start("c:\\Users\\aisom\\Documents\\Ryoshi\\Ryoshi\\bin\\Debug\\gakushi.bat", ">NUL"));
+
             discord = new DiscordClient(new DiscordConfiguration
             {
-                Token = "MY DISCORD TOKEN GOES HERE... USE YOUR OWN ;P",
+                Token = "YOUR-BOT-TOKEN-FROM-DISCORDAPP-WEBSITE-GOES-HERE",
                 TokenType = TokenType.Bot,
                 AutoReconnect = true
             });
@@ -47,18 +40,21 @@ namespace Ryoshi
                 var role = data.Guild.Roles.FirstOrDefault(roles => roles.Name == "Tsukonin");
                 await member.GrantRoleAsync(role);
             };
-            
-            Magician.DisappearConsole();
 
             commands = discord.UseCommandsNext(new CommandsNextConfiguration
             {
                 StringPrefixes = new [] { "hola, ", "oi, ", "yo, ", "hey, ", "sup, ", "aloha, ",
-                                            "hola ", "oi ", "yo ", "hey ", "sup ", "aloha " }
+                                            "hola ", "oi ", "yo ", "hey ", "sup ", "aloha ", "alert " },
+                EnableDms = true
             });
 
             commands.RegisterCommands<Commander>();
 
             interactivity = discord.UseInteractivity(new InteractivityConfiguration { });
+
+            Schedule.ReadZoneInfo();
+
+            Magician.DisappearConsole();
 
             await discord.ConnectAsync();
 
